@@ -30,7 +30,7 @@ By combining AI integration, backend engineering, and the **Model Context Protoc
 > 💡 Building AI that doesn't just understand — but knows when something needs attention.
 
 ---
-
+live link : https://nova-7ujl.vercel.app/
 ## 🚀 CORE CAPABILITIES
 
 <table>

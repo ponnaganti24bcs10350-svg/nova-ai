@@ -154,8 +154,23 @@ function createMcpServer() {
     "coordinate_household_event",
     {
       title: "Coordinate Household Event",
-      description:
-        "Submit a household event to AEGIS. It evaluates the context, selects a simulated action, and returns the decision and execution result.",
+     
+description: `
+Submit a household event to AEGIS for evaluation.
+
+IMPORTANT: The type field must be exactly one of these values:
+- DOORBELL: Someone pressed the doorbell.
+- QUIET_HOURS: Quiet hours are active or being requested.
+- CONFLICTING_REQUEST: Two household requests conflict.
+- DEVICE_FAILURE: A household device or device action failed.
+- SAFETY_EMERGENCY: A potential fire, gas leak, injury, or other safety emergency.
+
+For any doorbell event, ALWAYS use DOORBELL.
+Never invent, abbreviate, or modify event type values.
+A live match does not change the event type. Use DOORBELL
+for a doorbell pressed while someone is watching a match.
+`,
+
       inputSchema: {
         type: z
           .enum([

@@ -74,15 +74,43 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "coordinate_household_event",
-      description: "Evaluate a household event and execute the selected simulated action. Safety emergencies take priority.",
+     
+name: "coordinate_household_event",
+description: `
+Evaluate a household event and execute the selected simulated action.
+
+The type MUST be exactly one of:
+DOORBELL, QUIET_HOURS, CONFLICTING_REQUEST,
+DEVICE_FAILURE, SAFETY_EMERGENCY.
+
+Rules:
+- A doorbell ringing always means type DOORBELL.
+- A live match does not change the event type.
+- A doorbell during a live match still means DOORBELL.
+- Quiet hours alone means QUIET_HOURS.
+- Use CONFLICTING_REQUEST only when household requests conflict.
+- Use DEVICE_FAILURE when a device or device action fails.
+- Use SAFETY_EMERGENCY for a potential safety emergency.
+Never invent event type values.
+`,
+
       parameters: {
         type: "object",
         properties: {
-          type: {
-            type: "string",
-            enum: ["DOORBELL", "QUIET_HOURS", "CONFLICTING_REQUEST", "DEVICE_FAILURE", "SAFETY_EMERGENCY"],
-          },
+         
+type: {
+  type: "string",
+  description:
+    "Use DOORBELL whenever a doorbell rings, even during a live match or quiet hours. Never use invented values.",
+  enum: [
+    "DOORBELL",
+    "QUIET_HOURS",
+    "CONFLICTING_REQUEST",
+    "DEVICE_FAILURE",
+    "SAFETY_EMERGENCY",
+  ],
+},
+
           description: { type: "string" },
           liveMatch: { type: "boolean" },
           quietHours: { type: "boolean" },
@@ -116,6 +144,11 @@ const SYSTEM_PROMPT = [
   "Treat tool results as the source of truth. If a tool fails, explain the failure honestly.",
   "Do not invent incident IDs, statuses, decisions, or execution results.",
   "Before executing a consequential household action that was only discussed hypothetically, ask for confirmation. If the user clearly confirms a proposed action, use the appropriate tool if one exists.",
+
+  "For coordinate_household_event, the type must be exactly one of DOORBELL, QUIET_HOURS, CONFLICTING_REQUEST, DEVICE_FAILURE, or SAFETY_EMERGENCY.",
+  "When the user mentions a doorbell, always use DOORBELL, including when a live match is playing or quiet hours are active. Pass liveMatch and quietHours as separate context flags.",
+  "Never invent event type values such as DOORBERRY or DOORBANK. Use only the exact allowed enum values from the tool schema.",
+
 ].join(" ");
 
 
@@ -205,8 +238,42 @@ export function registerAssistantRoutes(app: Express) {
           const name = toolCall.function.name;
           let result: unknown;
           try {
-            const args = JSON.parse(toolCall.function.arguments || "{}") as ToolArguments;
-            result = await executeTool(name, args);
+          
+const args = JSON.parse(
+  toolCall.function.arguments || "{}"
+) as ToolArguments;
+
+if (name === "coordinate_household_event") {
+  const description =
+    typeof args.description === "string"
+      ? args.description.toLowerCase()
+      : "";
+
+  const validTypes = [
+    "DOORBELL",
+    "QUIET_HOURS",
+    "CONFLICTING_REQUEST",
+    "DEVICE_FAILURE",
+    "SAFETY_EMERGENCY",
+  ];
+
+  if (
+    description.includes("doorbell") ||
+    description.includes("visitor rang")
+  ) {
+    args.type = "DOORBELL";
+  } else if (
+    typeof args.type !== "string" ||
+    !validTypes.includes(args.type)
+  ) {
+    throw new Error(
+      `Invalid household event type: ${String(args.type)}`
+    );
+  }
+}
+
+result = await executeTool(name, args);
+
           } catch (error) {
             result = { error: error instanceof Error ? error.message : "MCP tool execution failed." };
           }

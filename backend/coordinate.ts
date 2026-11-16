@@ -41,12 +41,14 @@ function isSafetyEmergency(event: HouseholdEvent): boolean {
     "someone has collapsed",
     "person has collapsed",
     "can't breathe",
-    "cannot breathe"
+    "cannot breathe",
   ];
 
   return (
     event.type === "SAFETY_EMERGENCY" ||
-    safetyKeywords.some((keyword) => description.includes(keyword))
+    safetyKeywords.some((keyword) =>
+      description.includes(keyword)
+    )
   );
 }
 
@@ -55,7 +57,6 @@ export function evaluateHouseholdEvent(
 ): CoordinationDecision {
   const context = event.context ?? {};
 
-
   if (isSafetyEmergency(event)) {
     return {
       eventId: event.id,
@@ -63,19 +64,20 @@ export function evaluateHouseholdEvent(
       reason:
         "A possible safety emergency takes priority over ordinary household activities.",
       actions: ["PRIORITIZE_SAFETY"],
-      status: "PLANNED"
+      status: "PLANNED",
     };
   }
 
   switch (event.type) {
-    case "DOORBELL":
+    case "DOORBELL": {
       if (context.quietHours) {
         return {
           eventId: event.id,
           decision: "QUIET_DOORBELL_ANNOUNCEMENT",
-          reason: "Quiet hours are active, so avoid a loud announcement.",
+          reason:
+            "Quiet hours are active, so avoid a loud announcement.",
           actions: ["USE_LOW_VOLUME_ANNOUNCEMENT"],
-          status: "PLANNED"
+          status: "PLANNED",
         };
       }
 
@@ -83,28 +85,33 @@ export function evaluateHouseholdEvent(
         return {
           eventId: event.id,
           decision: "MINIMIZE_MATCH_INTERRUPTION",
-          reason: "A live match is in progress, so use a brief announcement.",
+          reason:
+            "A live match is in progress, so use a brief announcement.",
           actions: ["USE_BRIEF_ANNOUNCEMENT"],
-          status: "PLANNED"
+          status: "PLANNED",
         };
       }
 
       return {
         eventId: event.id,
         decision: "ANNOUNCE_DOORBELL",
-        reason: "A doorbell event needs household attention.",
+        reason:
+          "A doorbell event needs household attention.",
         actions: ["ANNOUNCE_DOORBELL"],
-        status: "PLANNED"
+        status: "PLANNED",
       };
+    }
 
-    case "QUIET_HOURS":
+    case "QUIET_HOURS": {
       return {
         eventId: event.id,
         decision: "PRESERVE_QUIET",
-        reason: "Avoid unnecessary noise during quiet hours.",
+        reason:
+          "Avoid unnecessary noise during quiet hours.",
         actions: ["REDUCE_ANNOUNCEMENTS"],
-        status: "PLANNED"
+        status: "PLANNED",
       };
+    }
 
     case "CONFLICTING_REQUEST": {
       const description = event.description.toLowerCase();
@@ -116,7 +123,7 @@ export function evaluateHouseholdEvent(
           reason:
             "Quiet hours are active, so minimizing noise takes priority.",
           actions: ["KEEP_VOLUME_LOW"],
-          status: "PLANNED"
+          status: "PLANNED",
         };
       }
 
@@ -130,7 +137,7 @@ export function evaluateHouseholdEvent(
           reason:
             "Balance the competing requests by keeping the TV at a moderate volume.",
           actions: ["SET_MODERATE_TV_VOLUME"],
-          status: "PLANNED"
+          status: "PLANNED",
         };
       }
 
@@ -141,7 +148,7 @@ export function evaluateHouseholdEvent(
           reason:
             "A live match is in progress, so avoid unnecessary interruptions.",
           actions: ["MINIMIZE_INTERRUPTION"],
-          status: "PLANNED"
+          status: "PLANNED",
         };
       }
 
@@ -151,27 +158,37 @@ export function evaluateHouseholdEvent(
         reason:
           "No clear priority is configured, so ask household members to clarify their preferences.",
         actions: ["ASK_FOR_PREFERENCE"],
-        status: "PLANNED"
+        status: "PLANNED",
       };
     }
 
-    case "DEVICE_FAILURE":
+    case "DEVICE_FAILURE": {
       return {
         eventId: event.id,
         decision: "RECOVER_DEVICE_ACTION",
-        reason: "A failed device action needs recovery handling.",
+        reason:
+          "A failed device action needs recovery handling.",
         actions: ["RETRY_OR_USE_FALLBACK"],
-        status: "PLANNED"
+        status: "PLANNED",
       };
+    }
 
-    case "SAFETY_EMERGENCY":
-      
+    case "SAFETY_EMERGENCY": {
       return {
         eventId: event.id,
         decision: "SAFETY_ALERT",
-        reason: "A possible safety emergency takes priority.",
+        reason:
+          "A possible safety emergency takes priority.",
         actions: ["PRIORITIZE_SAFETY"],
-        status: "PLANNED"
+        status: "PLANNED",
       };
+    }
+
+    default: {
+      const exhaustiveCheck: never = event.type;
+      throw new Error(
+        `Unsupported household event: ${exhaustiveCheck}`
+      );
+    }
   }
 }
